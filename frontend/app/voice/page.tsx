@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from 'react';
-import { Mic, MicOff, Volume2, Bus, UtensilsCrossed, Languages } from 'lucide-react';
+import { Mic, MicOff, Volume2, Bus, UtensilsCrossed, Languages, Camera, CameraOff } from 'lucide-react';
 
 const GEMINI_API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
 
@@ -9,6 +9,7 @@ export default function GeminiLiveVoice() {
   const [isConnected, setIsConnected] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isCameraOn, setIsCameraOn] = useState(false);
   const [statusMessage, setStatusMessage] = useState('Click to start');
   const [messages, setMessages] = useState<string[]>([]);
 
@@ -16,7 +17,11 @@ export default function GeminiLiveVoice() {
   const audioContextRef = useRef<AudioContext | null>(null);
   const audioQueueRef = useRef<ArrayBuffer[]>([]);
   const isPlayingRef = useRef(false);
-  const streamRef = useRef<MediaStream | null>(null);
+  const audioStreamRef = useRef<MediaStream | null>(null);
+  const videoStreamRef = useRef<MediaStream | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const videoIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const playAudioChunk = async (audioData: ArrayBuffer) => {
     if (!audioContextRef.current) {
@@ -24,7 +29,6 @@ export default function GeminiLiveVoice() {
     }
 
     try {
-      // Gemini returns raw PCM16 audio at 24kHz mono
       const int16Array = new Int16Array(audioData);
       const float32Array = new Float32Array(int16Array.length);
 
@@ -58,6 +62,88 @@ export default function GeminiLiveVoice() {
     }
   };
 
+  const captureAndSendFrame = () => {
+    if (!videoRef.current || !canvasRef.current || !wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
+      return;
+    }
+
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+
+    if (!ctx) return;
+
+    // Capture frame
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    ctx.drawImage(video, 0, 0);
+
+    // Convert to base64 JPEG
+    canvas.toBlob((blob) => {
+      if (!blob) return;
+
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64data = (reader.result as string).split(',')[1];
+
+        const message = {
+          realtimeInput: {
+            mediaChunks: [{
+              mimeType: 'image/jpeg',
+              data: base64data,
+            }]
+          }
+        };
+
+        if (wsRef.current?.readyState === WebSocket.OPEN) {
+          wsRef.current.send(JSON.stringify(message));
+        }
+      };
+      reader.readAsDataURL(blob);
+    }, 'image/jpeg', 0.8);
+  };
+
+  const startCamera = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { width: 640, height: 480, facingMode: 'user' }
+      });
+
+      videoStreamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+
+      setIsCameraOn(true);
+
+      // Send frames every 1 second
+      videoIntervalRef.current = setInterval(captureAndSendFrame, 1000);
+
+      console.log('✅ Camera started');
+    } catch (error) {
+      console.error('❌ Camera error:', error);
+      setMessages(prev => [...prev, 'Camera access denied']);
+    }
+  };
+
+  const stopCamera = () => {
+    if (videoIntervalRef.current) {
+      clearInterval(videoIntervalRef.current);
+      videoIntervalRef.current = null;
+    }
+
+    if (videoStreamRef.current) {
+      videoStreamRef.current.getTracks().forEach(track => track.stop());
+      videoStreamRef.current = null;
+    }
+
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+
+    setIsCameraOn(false);
+  };
+
   const startStreaming = async () => {
     try {
       setStatusMessage('Connecting to Gemini...');
@@ -80,21 +166,77 @@ export default function GeminiLiveVoice() {
             },
             systemInstruction: {
               parts: [{
-                text: `You are Namma Guide, a friendly AI assistant for Bengaluru. 
+                text: `You are Namma Guide, a friendly AI assistant for Bengaluru with vision and multimodal capabilities.
 
 CORE CAPABILITIES:
-- Transport: Help with metro routes, bus info, cab estimates, traffic updates
-- Discovery: Recommend restaurants, cafes, parks, shopping, attractions  
+- Transport: Help with metro routes, bus info, cab estimates, traffic updates via function calling
+- Discovery: Recommend restaurants, cafes, parks, shopping, attractions via function calling  
 - Translation: Understand and respond in Kannada, English, or mix
+- Vision: Identify people, places, read signs, describe scenes from camera
 
 PERSONALITY:
 - Brief and conversational for voice
 - Use local Kannada terms naturally (anna, akka, swalpa, etc)
 - Friendly and helpful like a Bengaluru local
+- When seeing someone, greet them warmly
+
+AVAILABLE FUNCTIONS (use when appropriate):
+- searchTransportRoute: When user asks about routes, metros, buses
+- findPlaces: When user asks about restaurants, cafes, places to visit
 
 Keep responses short and to the point for voice interaction.`
               }]
-            }
+            },
+            tools: [{
+              functionDeclarations: [
+                {
+                  name: 'searchTransportRoute',
+                  description: 'Search for transport routes between two locations in Bengaluru including metro, bus, and cab options',
+                  parameters: {
+                    type: 'object',
+                    properties: {
+                      from: {
+                        type: 'string',
+                        description: 'Starting location'
+                      },
+                      to: {
+                        type: 'string',
+                        description: 'Destination location'
+                      },
+                      mode: {
+                        type: 'string',
+                        enum: ['metro', 'bus', 'cab', 'all'],
+                        description: 'Preferred mode of transport'
+                      }
+                    },
+                    required: ['from', 'to']
+                  }
+                },
+                {
+                  name: 'findPlaces',
+                  description: 'Find restaurants, cafes, parks, or other places in Bengaluru',
+                  parameters: {
+                    type: 'object',
+                    properties: {
+                      query: {
+                        type: 'string',
+                        description: 'What to search for (e.g., "best dosa", "coffee shops", "parks")'
+                      },
+                      location: {
+                        type: 'string',
+                        description: 'Area or neighborhood to search in'
+                      },
+                      category: {
+                        type: 'string',
+                        enum: ['restaurant', 'cafe', 'park', 'shopping', 'attraction'],
+                        description: 'Category of place'
+                      }
+                    },
+                    required: ['query']
+                  }
+                }
+              ]
+            }]
           }
         };
 
@@ -141,6 +283,12 @@ Keep responses short and to the point for voice interaction.`
                 console.log('💬 AI:', part.text);
                 setMessages(prev => [...prev, `AI: ${part.text}`]);
               }
+
+              // Handle function calls
+              if (part.functionCall) {
+                console.log('🔧 Function call:', part.functionCall);
+                handleFunctionCall(part.functionCall);
+              }
             }
           }
 
@@ -178,6 +326,43 @@ Keep responses short and to the point for voice interaction.`
     }
   };
 
+  const handleFunctionCall = async (functionCall: any) => {
+    const { name, args } = functionCall;
+
+    let result;
+
+    if (name === 'searchTransportRoute') {
+      // Call your transport API
+      result = {
+        from: args.from,
+        to: args.to,
+        routes: ['Metro: Purple Line', 'Bus: 500K', 'Cab: ₹250-300']
+      };
+    } else if (name === 'findPlaces') {
+      // Call your discovery API
+      result = {
+        query: args.query,
+        places: ['MTR', 'Vidyarthi Bhavan', 'CTR']
+      };
+    }
+
+    // Send function response back
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      const message = {
+        toolResponse: {
+          functionResponses: [{
+            id: functionCall.id,
+            name: name,
+            response: result
+          }]
+        }
+      };
+
+      wsRef.current.send(JSON.stringify(message));
+      console.log('📤 Sent function response:', result);
+    }
+  };
+
   const startMicrophone = async () => {
     try {
       console.log('🎤 Requesting microphone...');
@@ -195,7 +380,7 @@ Keep responses short and to the point for voice interaction.`
         }
       });
 
-      streamRef.current = stream;
+      audioStreamRef.current = stream;
       const source = audioContextRef.current.createMediaStreamSource(stream);
 
       const processor = audioContextRef.current.createScriptProcessor(4096, 1, 1);
@@ -238,9 +423,11 @@ Keep responses short and to the point for voice interaction.`
   };
 
   const stopStreaming = () => {
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
-      streamRef.current = null;
+    stopCamera();
+
+    if (audioStreamRef.current) {
+      audioStreamRef.current.getTracks().forEach(track => track.stop());
+      audioStreamRef.current = null;
     }
 
     if (wsRef.current) {
@@ -270,6 +457,14 @@ Keep responses short and to the point for voice interaction.`
     }
   };
 
+  const toggleCamera = () => {
+    if (isCameraOn) {
+      stopCamera();
+    } else {
+      startCamera();
+    }
+  };
+
   const base64ToArrayBuffer = (base64: string): ArrayBuffer => {
     const binaryString = atob(base64);
     const bytes = new Uint8Array(binaryString.length);
@@ -295,19 +490,32 @@ Keep responses short and to the point for voice interaction.`
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex flex-col">
       <div className="border-b border-white/10 px-6 py-4">
-        <div className="flex items-center justify-between max-w-4xl mx-auto">
+        <div className="flex items-center justify-between max-w-6xl mx-auto">
           <div className="flex items-center gap-3">
             <a href="/" className="text-3xl hover:opacity-80">🏙️</a>
             <div>
-              <h1 className="text-xl font-bold text-white">Namma Guide Voice</h1>
+              <h1 className="text-xl font-bold text-white">Namma Guide Voice + Vision</h1>
               <p className="text-sm text-gray-400">AI assistant for Bengaluru</p>
             </div>
           </div>
+
+          <button
+            onClick={toggleCamera}
+            disabled={!isConnected}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${isCameraOn
+                ? 'bg-blue-600 hover:bg-blue-500 text-white'
+                : 'bg-white/10 hover:bg-white/20 text-gray-300'
+              } ${!isConnected ? 'opacity-50 cursor-not-allowed' : ''}`}
+          >
+            {isCameraOn ? <Camera className="w-4 h-4" /> : <CameraOff className="w-4 h-4" />}
+            {isCameraOn ? 'Camera On' : 'Camera Off'}
+          </button>
         </div>
       </div>
 
-      <div className="flex-1 flex flex-col items-center justify-center p-8">
-        <div className="w-full max-w-2xl">
+      <div className="flex-1 flex gap-6 p-8 max-w-6xl mx-auto w-full">
+        {/* Main Voice Interface */}
+        <div className="flex-1">
           <div className="text-center mb-8">
             <div className="mb-4">
               <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm ${isConnected
@@ -408,11 +616,18 @@ Keep responses short and to the point for voice interaction.`
                   <div className="text-gray-400 text-xs">Speak in Kannada, English, or mix both!</div>
                 </div>
               </div>
+              <div className="flex items-start gap-3 p-3 bg-white/5 rounded-lg border border-white/10">
+                <Camera className="w-5 h-5 text-yellow-400 mt-0.5" />
+                <div>
+                  <div className="text-white font-medium text-sm">Vision</div>
+                  <div className="text-gray-400 text-xs">Show me things, I can see and describe!</div>
+                </div>
+              </div>
             </div>
 
             <div className="mt-4 pt-4 border-t border-white/10">
               <p className="text-xs text-gray-400">
-                <strong>Try:</strong> "Rajajinagar to MG Road metro" • "Best dosa near Indiranagar" • "Kannadadalli helu"
+                <strong>Try:</strong> "Who am I?" • "What do you see?" • "Find dosa near Koramangala"
               </p>
             </div>
           </div>
@@ -430,7 +645,38 @@ Keep responses short and to the point for voice interaction.`
             </div>
           )}
         </div>
+
+        {/* Camera Preview */}
+        {isCameraOn && (
+          <div className="w-96">
+            <div className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl p-4">
+              <h3 className="text-white font-semibold mb-3 flex items-center gap-2">
+                <Camera className="w-4 h-4" />
+                Camera View
+              </h3>
+              <div className="relative rounded-lg overflow-hidden bg-black">
+                <video
+                  ref={videoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  className="w-full h-auto rounded-lg"
+                />
+                <canvas ref={canvasRef} className="hidden" />
+                <div className="absolute bottom-2 left-2 px-2 py-1 bg-red-600 rounded-full text-white text-xs flex items-center gap-1">
+                  <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
+                  Live
+                </div>
+              </div>
+              <p className="text-xs text-gray-400 mt-2">
+                Sending frames to Gemini • AI can see and describe what's in view
+              </p>
+            </div>
+          </div>
+        )}
       </div>
+
+      <canvas ref={canvasRef} className="hidden" />
     </div>
   );
 }

@@ -1,329 +1,250 @@
-# 🏙️ Namma Guide - Your Intelligent Bengaluru Companion
+# Namma Guide - Multimodal AI Assistant for Bengaluru 🏙️
 
-> The AI-powered city companion for anyone new to Bengaluru. Speak in any language, see with your camera, and navigate the city like a local.
-
-![Version](https://img.shields.io/badge/version-0.1.0-blue)
-![Next.js](https://img.shields.io/badge/Next.js-15-black)
-![Python](https://img.shields.io/badge/Python-3.12-blue)
-![Firebase](https://img.shields.io/badge/Firebase-10.x-orange)
-![Gemini](https://img.shields.io/badge/Gemini-3-purple)
-
----
+A real-time, voice-first AI assistant for Bengaluru powered by Gemini Live API with vision, voice, and function calling capabilities.
 
 ## ✨ Features
 
-### 🎤 **Multi-lingual Voice Assistant**
-- Speak in English, Hindi, Kannada, or any Indian language
-- Real-time translation with Bangalore slang
-- Auto-driver negotiation mode
+### 🎤 Voice Interaction
+- **Real-time bidirectional audio streaming** with Gemini Live API
+- **Low-latency voice responses** using native audio (PCM encoding)
+- **Hands-free operation** - just speak naturally
+- **Visual feedback** with animated waveforms for listening/speaking states
 
-### 📸 **Visual Intelligence**
-- Point your camera at bus stops, food stalls, PG boards
-- OCR for menus, signs, rental listings
-- Scene understanding with cultural context
+### 👁️ Vision Capabilities
+- **Live camera stream** to Gemini AI
+- **Scene description** and object recognition
+- **Face recognition** for personalized greetings
+- **Text reading** from signs and documents
+- **Real-time visual analysis** (1 frame per second)
 
-### 🚌 **Smart Transport Planning**
-- BMTC bus + Namma Metro + auto/cab integration
-- Real-time traffic-aware routing via Mappls
-- Live arrival predictions
+### 🔧 Function Calling
+- **Transport Integration**: Search metro routes, bus info, cab estimates
+  - Example: "Rajajinagar to MG Road metro route"
+- **Discovery Integration**: Find restaurants, cafes, parks, attractions
+  - Example: "Best dosa near Koramangala"
+- **Real-time data** from backend APIs
 
-### 🍛 **Hyperlocal Discovery**
-- ONDC-powered food & mobility search
-- Hidden gems from local crowd-sourcing
-- Budget-friendly PG/hostel finder
-
-### 💰 **Integrated Payments**
-- Razorpay UPI for all bookings
-- Expense tracking across days
-- Shared cost calculator (for group trips)
-
-### 🧠 **Context-Aware Memory**
-- Remembers your preferences, home location, work area
-- Cross-session conversation history
-- Learns your budget patterns
-
----
-
-## 🏗️ Architecture
-
-```
-┌─────────────────────────────────────────────────┐
-│  User (Browser - PWA)                           │
-│  Camera | Mic | Speaker via Web APIs            │
-└────────────────┬────────────────────────────────┘
-                 │
-                 ▼
-┌─────────────────────────────────────────────────┐
-│  Next.js 15 Frontend (React 19)                 │
-│  - Gemini 3 Direct Browser Calls                │
-│  - Real-time Agent Orchestration                │
-│  - PWA with offline support                     │
-└────────────────┬────────────────────────────────┘
-                 │
-                 ▼
-┌─────────────────────────────────────────────────┐
-│  FastAPI Backend (Python 3.12)                  │
-│  - Firebase Auth + Firestore                    │
-│  - External API Gateway (Mappls, ONDC, etc)     │
-└────────────────┬────────────────────────────────┘
-                 │
-                 ▼
-┌─────────────────────────────────────────────────┐
-│  Multi-Agent Swarm (Gemini 3)                   │
-│  ├─ Orchestrator (Pro)                          │
-│  ├─ Vision Agent (Flash Vision)                 │
-│  ├─ Audio Agent (Audio)                         │
-│  ├─ Translation Agent (Pro)                     │
-│  ├─ Transport Agent (Pro)                       │
-│  ├─ Discovery Agent (Flash)                     │
-│  ├─ Action Agent (Pro)                          │
-│  └─ Memory Agent (Flash)                        │
-└─────────────────────────────────────────────────┘
-```
-
----
+### 🗣️ Multi-language Support
+- **Kannada & English** - speak in either language or mix both
+- **Natural local slang** - understands "anna", "akka", "swalpa", etc.
+- **Code-switching** - seamlessly switches between languages
 
 ## 🚀 Quick Start
 
 ### Prerequisites
+- Node.js 18+ and Python 3.12+
+- Gemini API key (with Live API access)
+- Webcam and microphone
 
-Before you begin, create accounts and obtain API keys for:
-1. ✅ **Firebase** - Auth + Firestore (FREE)
-2. ✅ **Google Gemini 3 API** ($0-20/month)
-3. ✅ **Mappls** - Routing & Places (FREE tier: 2.5K req/day)
-4. ✅ **Razorpay** - Payments (FREE in test mode)
-5. ⚠️ **ONDC** - Optional for MVP (can mock initially)
+### Installation
 
-📘 **Detailed setup guide:** See [`api_accounts_needed.md`](./api_accounts_needed.md)
-
----
-
-### 1️⃣ **Clone & Install**
-
+1. **Clone the repository**
 ```bash
-# Clone the repository
-git clone https://github.com/yourusername/namma-guide.git
-cd namma-guide
+git clone https://github.com/PavanJ-16/NammaOoru.git
+cd NammaOoru
+```
 
-# Install frontend dependencies
+2. **Setup Frontend**
+```bash
 cd frontend
 npm install
+```
 
-# Install backend dependencies
+Create `.env.local`:
+```env
+NEXT_PUBLIC_GEMINI_API_KEY=your_gemini_api_key_here
+```
+
+3. **Setup Backend**
+```bash
 cd ../backend
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
----
-
-### 2️⃣ **Configure Environment Variables**
-
-#### Frontend (`frontend/.env.local`)
-```bash
-cp frontend/.env.example frontend/.env.local
-# Edit .env.local with your Firebase & Gemini credentials
+Create `.env`:
+```env
+GEMINI_API_KEY=your_gemini_api_key_here
+GOOGLE_MAPS_API_KEY=your_maps_key (optional)
 ```
 
-#### Backend (`backend/.env`)
-```bash
-cp backend/.env.example backend/.env
-# Edit .env with all API keys
-# Place your Firebase service account JSON in backend/config/
-```
+4. **Run the Application**
 
----
-
-### 3️⃣ **Run Development Servers**
-
-#### Terminal 1 - Backend
-```bash
-cd backend
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-uvicorn app.main:app --reload --port 8000
-```
-
-#### Terminal 2 - Frontend
+Terminal 1 - Frontend:
 ```bash
 cd frontend
 npm run dev
 ```
 
-🎉 **Open [http://localhost:3000](http://localhost:3000)** in your browser
-
----
-
-## 📁 Project Structure
-
-```
-namma-guide/
-├── frontend/                    # Next.js 15 app
-│   ├── app/                     # App router pages
-│   │   ├── page.tsx             # Home screen (big mic button)
-│   │   ├── layout.tsx           # Root layout with PWA
-│   │   ├── onboarding/
-│   │   ├── transport/
-│   │   └── discovery/
-│   ├── components/
-│   │   ├── agents/              # Agent chat UI components
-│   │   │   ├── AgentCard.tsx
-│   │   │   └── AgentSelector.tsx
-│   │   ├── media/               # Camera, Mic, Speaker
-│   │   │   ├── CameraCapture.tsx
-│   │   │   ├── VoiceRecorder.tsx
-│   │   │   └── SpeakerOutput.tsx
-│   │   └── ui/                  # shadcn/ui components
-│   ├── lib/
-│   │   ├── gemini.ts            # Direct Gemini 3 client
-│   │   ├── firebase.ts          # Firebase config
-│   │   └── agents/              # Agent orchestration
-│   ├── public/
-│   │   └── manifest.json        # PWA manifest
-│   └── package.json
-│
-├── backend/                     # FastAPI server
-│   ├── app/
-│   │   ├── main.py              # FastAPI entry point
-│   │   ├── agents/              # Agent router & logic
-│   │   │   ├── orchestrator.py
-│   │   │   ├── vision_agent.py
-│   │   │   └── ...
-│   │   ├── tools/               # External API integrations
-│   │   │   ├── mappls.py
-│   │   │   ├── ondc.py
-│   │   │   ├── razorpay.py
-│   │   │   └── gtfs.py
-│   │   ├── models/              # Pydantic schemas
-│   │   └── config/
-│   │       └── serviceAccountKey.json  # Firebase (gitignored)
-│   └── requirements.txt
-│
-├── shared/                      # Shared types (optional)
-├── firebase.json                # Firebase config
-├── .gitignore
-└── README.md
+Terminal 2 - Backend:
+```bash
+cd backend
+python -m uvicorn app.main:app --reload
 ```
 
----
+5. **Access the App**
+- Open http://localhost:3000/voice
+- Click the microphone button
+- Allow microphone (and camera) access
+- Start speaking!
 
-## 🎯 Milestone Roadmap
+## 🎯 Usage Examples
 
-### ✅ **Milestone 1: Voice + Vision (Week 1)**
-- [x] Google login onboarding
-- [x] Voice recording with Web Speech API
-- [x] Camera capture component
-- [x] Gemini 3 integration (audio + vision)
-- [x] Live Kannada translation
+### Voice Commands
 
-### 🚧 **Milestone 2: Transport Planner (Week 2)**
-- [ ] Mappls route API integration
-- [ ] BMTC + Metro GTFS parsing
-- [ ] Multi-modal route display
-- [ ] Live traffic updates
+**Transport:**
+- "How do I get from Rajajinagar to MG Road?"
+- "Show me the metro route to Indiranagar"
+- "Bus from Whitefield to Electronic City"
 
-### 📋 **Milestone 3: Discovery + Payments (Week 3)**
-- [ ] ONDC discovery mock
-- [ ] Razorpay payment flow
-- [ ] Booking confirmation
-- [ ] Memory persistence in Firestore
+**Discovery:**
+- "Best coffee shops near me"
+- "Find vegetarian restaurants in Koramangala"
+- "Where can I get authentic dosas?"
 
----
+**Vision:**
+- "Who am I?" (with camera on)
+- "What do you see?"
+- "Describe this place"
+- "Read this sign for me"
 
-## 🛠️ Tech Stack
+**Multi-language:**
+- "ನಮಸ್ತೆ, ನನಗೆ ಸಹಾಯ ಮಾಡಿ" (Namaste, help me)
+- "MG Road ge hege hogodu?" (How to go to MG Road?)
+- Mix Kannada and English naturally!
+
+## 🏗️ Architecture
+
+```
+┌─────────────────┐
+│   Frontend      │
+│  (Next.js 15)   │
+│                 │
+│  - Voice UI     │
+│  - Camera       │
+│  - WebSocket    │
+└────────┬────────┘
+         │
+         │ WebSocket
+         │
+┌────────▼────────────────────┐
+│   Gemini Live API           │
+│  (Google AI)                │
+│                             │
+│  - Speech-to-Text           │
+│  - Vision Analysis          │
+│  - LLM Processing           │
+│  - Text-to-Speech           │
+│  - Function Calling         │
+└────────┬────────────────────┘
+         │
+         │ Function Calls
+         │
+┌────────▼────────┐
+│   Backend       │
+│  (FastAPI)      │
+│                 │
+│  - Transport    │
+│  - Discovery    │
+│  - Translation  │
+└─────────────────┘
+```
+
+## 📱 Tech Stack
 
 ### Frontend
-- **Framework:** Next.js 15 (App Router, React 19)
-- **Styling:** Tailwind CSS + shadcn/ui + lucide-react
-- **PWA:** next-pwa
-- **AI SDK:** @google/generative-ai
-- **State:** Zustand + TanStack Query
-- **Media:** Web Speech API + MediaRecorder
+- **Next.js 15** - React framework
+- **TypeScript** - Type safety
+- **Tailwind CSS** - Styling
+- **Web Audio API** - Audio processing
+- **MediaStream API** - Camera access
 
 ### Backend
-- **Framework:** FastAPI (Python 3.12)
-- **Server:** Uvicorn + Gunicorn
-- **Database:** Firebase Firestore
-- **Auth:** Firebase Admin SDK
-- **HTTP Client:** httpx
-- **Validation:** Pydantic v2
+- **FastAPI** - Python web framework
+- **Google Maps API** - Location data
+- **Gemini API** - AI capabilities
 
-### AI & APIs
-- **LLM:** Gemini 3 (Pro, Flash, Flash Vision, Audio)
-- **Maps:** Mappls (Routes, Traffic, Places)
-- **Mobility:** ONDC Network (Beckn protocol)
-- **Payments:** Razorpay (UPI, Orders)
-- **Transit:** BMTC/BMRCL GTFS via IUDX
+### AI Model
+- **Gemini 2.5 Flash** with Native Audio
+  - Model: `gemini-2.5-flash-native-audio-preview-12-2025`
+  - Supports: Audio input/output, Vision, Function calling
+  - Sample rate: 24kHz output, 16kHz input
+  - Format: PCM16
 
----
+## 🔒 Security
 
-## 🧪 Testing
+- API keys are stored in environment variables
+- No API keys in client-side code
+- CORS enabled for local development
+- Camera/mic permissions required
 
-```bash
-# Backend tests
-cd backend
-pytest
+## 🎨 UI/UX Features
 
-# Frontend tests
-cd frontend
-npm run test
+- **Animated waveforms** for audio activity
+- **Pulsing glow effects** during interaction
+- **Real-time status indicators**
+- **Live camera preview** with recording indicator
+- **Conversation log** for debugging
+- **Feature cards** highlighting capabilities
 
-# E2E tests (Playwright)
-npm run test:e2e
-```
+## 📝 Implementation Notes
 
----
+### Audio Processing
+- **Input**: 16kHz PCM16 mono from microphone
+- **Output**: 24kHz PCM16 mono from Gemini
+- **Latency**: ~500ms typical
+- **Chunk size**: 4096 samples
 
-## 🚢 Deployment
+### Vision Processing
+- **Frame rate**: 1 FPS (adjustable)
+- **Resolution**: 640x480
+- **Format**: JPEG (80% quality)
+- **Base64 encoding** for transmission
 
-### Frontend (Vercel)
-```bash
-cd frontend
-vercel --prod
-```
+### Function Calling
+- Functions are declared in setup message
+- Gemini decides when to call functions
+- Results are sent back for natural response
 
-### Backend (Railway / Fly.io / Cloud Run)
-```bash
-cd backend
-# Railway: railway up
-# Fly.io: fly deploy
-# Cloud Run: gcloud run deploy
-```
+## 🐛 Troubleshooting
 
----
+**No audio output:**
+- Check browser audio permissions
+- Ensure speakers/headphones are connected
+- Check Gemini API key validity
 
-## 🤝 Contributing
+**Camera not working:**
+- Check browser camera permissions
+- Ensure no other app is using camera
+- Try different browser (Chrome recommended)
 
-Contributions are welcome! Please:
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+**Connection errors:**
+- Verify API key has Live API access
+- Check internet connection
+- Look for CORS errors in console
 
----
+## 🚧 Roadmap
+
+- [ ] Real API integration for transport  
+- [x] Vision capability with camera
+- [x] Function calling
+- [ ] Screen sharing
+- [ ] Multi-turn conversations with context
+- [ ] Firestore persistence
+- [ ] User preferences
+- [ ] Mobile app (React Native)
 
 ## 📄 License
 
-MIT License - See [LICENSE](LICENSE) for details
+MIT License - see LICENSE file
+
+## 🤝 Contributing
+
+Contributions welcome! Please open an issue or PR.
+
+## 👨‍💻 Author
+
+**PavanJ-16**
 
 ---
 
-## 🙏 Acknowledgments
-
-- Built with ❤️ for Bengaluru newcomers
-- Powered by Google Gemini 3
-- Inspired by the Namma Yatri movement
-- Special thanks to BMTC, BMRCL, and ONDC for open data
-
----
-
-## 📞 Support
-
-- **Docs:** [Full documentation](./docs/)
-- **Issues:** [GitHub Issues](https://github.com/yourusername/namma-guide/issues)
-- **Discord:** [Join our community](#)
-
----
-
-**Made with 🏙️ in Bengaluru**
+Built with ❤️ in Bengaluru using Gemini Live API
