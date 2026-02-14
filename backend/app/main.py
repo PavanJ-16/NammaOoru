@@ -33,6 +33,10 @@ app.add_middleware(
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Import and register routes
+from app.routes import router as api_router
+app.include_router(api_router)
+
 
 @app.get("/")
 async def root():

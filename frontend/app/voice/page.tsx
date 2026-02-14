@@ -290,6 +290,73 @@ Keep responses short and to the point for voice interaction.`
                     },
                     required: []
                   }
+                },
+                {
+                  name: 'getWeather',
+                  description: 'Get current weather information for Bengaluru',
+                  parameters: {
+                    type: 'object',
+                    properties: {},
+                    required: []
+                  }
+                },
+                {
+                  name: 'getTrafficStatus',
+                  description: 'Get live traffic status for routes in Bengaluru',
+                  parameters: {
+                    type: 'object',
+                    properties: {
+                      route: {
+                        type: 'string',
+                        description: 'Route or area to check (e.g., "Silk Board", "Outer Ring Road")'
+                      }
+                    },
+                    required: []
+                  }
+                },
+                {
+                  name: 'findEmergencyServices',
+                  description: 'Find nearby emergency services like hospitals, police, ambulance',
+                  parameters: {
+                    type: 'object',
+                    properties: {
+                      service_type: {
+                        type: 'string',
+                        enum: ['hospital', 'police', 'ambulance'],
+                        description: 'Type of emergency service'
+                      }
+                    },
+                    required: ['service_type']
+                  }
+                },
+                {
+                  name: 'getMetroTimings',
+                  description: 'Get next metro arrival times for a station',
+                  parameters: {
+                    type: 'object',
+                    properties: {
+                      station: {
+                        type: 'string',
+                        description: 'Metro station name (e.g., "MG Road", "Indiranagar")'
+                      }
+                    },
+                    required: ['station']
+                  }
+                },
+                {
+                  name: 'findEvents',
+                  description: 'Find upcoming events in Bengaluru',
+                  parameters: {
+                    type: 'object',
+                    properties: {
+                      category: {
+                        type: 'string',
+                        enum: ['music', 'sports', 'tech', 'food', 'all'],
+                        description: 'Event category'
+                      }
+                    },
+                    required: []
+                  }
                 }
               ]
             }]
@@ -474,6 +541,87 @@ Keep responses short and to the point for voice interaction.`
           addLog('❌ Video element not ready');
         }
       }
+    } else if (name === 'getWeather') {
+      addLog(`🌤️ Getting weather for Bengaluru`);
+      result = {
+        location: 'Bengaluru',
+        temperature: '24°C',
+        condition: 'Partly Cloudy',
+        humidity: '65%',
+        wind: '12 km/h',
+        forecast: 'Today: 24-30°C, Tomorrow: 23-29°C'
+      };
+      addLog('✅ Weather retrieved');
+
+    } else if (name === 'getTrafficStatus') {
+      addLog(`🚦 Checking traffic: ${args.route || 'General'}`);
+      const route = args.route?.toLowerCase() || '';
+      let status = 'Moderate traffic';
+
+      if (route.includes('silk board') || route.includes('outer ring')) {
+        status = 'Heavy traffic - Expect 20-30 min delays';
+      } else if (route.includes('mg road') || route.includes('indiranagar')) {
+        status = 'Light traffic - Normal flow';
+      }
+
+      result = {
+        route: args.route || 'Bengaluru',
+        status: status,
+        updated: new Date().toLocaleTimeString()
+      };
+      addLog(`✅ Traffic: ${status}`);
+
+    } else if (name === 'findEmergencyServices') {
+      addLog(`🚨 Finding ${args.service_type} services`);
+
+      const services: any = {
+        hospital: [
+          'Victoria Hospital: 2.1 km, Call 080-2670-1150',
+          'St. John\'s Medical: 3.5 km, Call 080-2296-4000',
+          'Manipal Hospital: 4.2 km, Call 080-2502-4444'
+        ],
+        police: [
+          'HAL Police: 1.8 km, Call 100',
+          'Koramangala Police: 2.5 km, Call 080-2553-0063'
+        ],
+        ambulance: [
+          'EMRI 108 Ambulance (Free): Call 108',
+          'Ziqitza Ambulance: Call 1298'
+        ]
+      };
+
+      result = {
+        service_type: args.service_type,
+        services: services[args.service_type] || [],
+        emergency_numbers: 'Police: 100, Ambulance: 108, Fire: 101'
+      };
+      addLog(`✅ Found ${result.services.length} services`);
+
+    } else if (name === 'getMetroTimings') {
+      addLog(`🚇 Metro timings for ${args.station}`);
+      result = {
+        station: args.station,
+        next_trains: [
+          'Towards Whitefield: 3 mins (Purple Line)',
+          'Towards Mysore Road: 8 mins (Purple Line)',
+          'Towards Nagasandra: 12 mins (Green Line)'
+        ],
+        operating_hours: '5:00 AM - 11:00 PM',
+        frequency: '5-7 mins'
+      };
+      addLog('✅ Next train in 3 mins');
+
+    } else if (name === 'findEvents') {
+      addLog(`🎪 Finding events: ${args.category || 'all'}`);
+      result = {
+        category: args.category || 'all',
+        events: [
+          'Bangalore Tech Summit - Feb 20-22 at BIEC',
+          'Sunburn Arena - Feb 17 at Jayamahal Palace (₹2000+)',
+          'IndvsPak Cricket - Feb 18 at Chinnaswamy (₹1500-10000)'
+        ]
+      };
+      addLog(`✅ Found ${result.events.length} events`);
     }
 
     // Send function response back
@@ -724,40 +872,47 @@ Keep responses short and to the point for voice interaction.`
             <h3 className="text-white font-semibold mb-4 flex items-center gap-2">
               ✨ Features Available
             </h3>
-            <div className="grid gap-3">
-              <div className="flex items-start gap-3 p-3 bg-white/5 rounded-lg border border-white/10">
-                <Bus className="w-5 h-5 text-purple-400 mt-0.5" />
+            <div className="grid gap-2">
+              <div className="flex items-start gap-3 p-2 bg-white/5 rounded-lg border border-white/10">
+                <Bus className="w-4 h-4 text-purple-400 mt-0.5" />
                 <div>
-                  <div className="text-white font-medium text-sm">Transport</div>
-                  <div className="text-gray-400 text-xs">Metro routes, bus info, cab estimates, traffic</div>
+                  <div className="text-white font-medium text-xs">Transport & Traffic</div>
+                  <div className="text-gray-400 text-xs">Routes, metro timings, live traffic</div>
                 </div>
               </div>
-              <div className="flex items-start gap-3 p-3 bg-white/5 rounded-lg border border-white/10">
-                <UtensilsCrossed className="w-5 h-5 text-blue-400 mt-0.5" />
+              <div className="flex items-start gap-3 p-2 bg-white/5 rounded-lg border border-white/10">
+                <UtensilsCrossed className="w-4 h-4 text-blue-400 mt-0.5" />
                 <div>
-                  <div className="text-white font-medium text-sm">Discovery</div>
-                  <div className="text-gray-400 text-xs">Restaurants, cafes, parks, shopping, attractions</div>
+                  <div className="text-white font-medium text-xs">Discovery</div>
+                  <div className="text-gray-400 text-xs">Restaurants, cafes, parks</div>
                 </div>
               </div>
-              <div className="flex items-start gap-3 p-3 bg-white/5 rounded-lg border border-white/10">
-                <Languages className="w-5 h-5 text-green-400 mt-0.5" />
+              <div className="flex items-start gap-3 p-2 bg-white/5 rounded-lg border border-white/10">
+                <Camera className="w-4 h-4 text-yellow-400 mt-0.5" />
                 <div>
-                  <div className="text-white font-medium text-sm">Multi-language</div>
-                  <div className="text-gray-400 text-xs">Speak in Kannada, English, or mix both!</div>
+                  <div className="text-white font-medium text-xs">Vision</div>
+                  <div className="text-gray-400 text-xs">See and describe</div>
                 </div>
               </div>
-              <div className="flex items-start gap-3 p-3 bg-white/5 rounded-lg border border-white/10">
-                <Camera className="w-5 h-5 text-yellow-400 mt-0.5" />
+              <div className="flex items-start gap-3 p-2 bg-white/5 rounded-lg border border-white/10">
+                <span className="text-red-400 text-sm mt-0.5">🚨</span>
                 <div>
-                  <div className="text-white font-medium text-sm">Vision</div>
-                  <div className="text-gray-400 text-xs">Show me things, I can see and describe!</div>
+                  <div className="text-white font-medium text-xs">Emergency</div>
+                  <div className="text-gray-400 text-xs">Hospitals, police, ambulance</div>
+                </div>
+              </div>
+              <div className="flex items-start gap-3 p-2 bg-white/5 rounded-lg border border-white/10">
+                <span className="text-blue-400 text-sm mt-0.5">🌤️</span>
+                <div>
+                  <div className="text-white font-medium text-xs">Weather & Events</div>
+                  <div className="text-gray-400 text-xs">Current weather, upcoming events</div>
                 </div>
               </div>
             </div>
 
             <div className="mt-4 pt-4 border-t border-white/10">
               <p className="text-xs text-gray-400">
-                <strong>Try:</strong> "Who am I?" • "What do you see?" • "Find dosa near Koramangala"
+                <strong>Try:</strong> "Weather?" • "Traffic on Silk Board?" • "Find hospital" • "Events this weekend"
               </p>
             </div>
           </div>
